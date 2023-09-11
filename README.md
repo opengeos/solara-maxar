@@ -1,5 +1,5 @@
 ---
-title: Solara Template
+title: Solara Maxar
 emoji: 🏃
 colorFrom: blue
 colorTo: green
