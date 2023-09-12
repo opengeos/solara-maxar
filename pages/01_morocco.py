@@ -24,7 +24,7 @@ def get_catalogs(name):
     return catalog_ids
 
 
-def update_geojson(m):
+def add_widgets(m):
     datasets = get_datasets()['dataset'].tolist()
 
     style = {"description_width": "initial"}
@@ -48,6 +48,13 @@ def update_geojson(m):
     checkbox = widgets.Checkbox(
         value=True,
         description='Show footprints',
+        style=style,
+        layout=widgets.Layout(width="130px", padding=padding),
+    )
+
+    split = widgets.Checkbox(
+        value=False,
+        description='Split map',
         style=style,
         layout=widgets.Layout(width="130px", padding=padding),
     )
@@ -77,9 +84,30 @@ def update_geojson(m):
 
     checkbox.observe(change_footprint, names='value')
 
+    def change_split(change):
+        if change.new:
+            if image.value is not None:
+                left_layer = m.find_layer(image.value)
+                right_layer = m.find_layer('Google Satellite')
+                right_layer.visible = True
+                footprint_layer = m.find_layer('Footprint')
+                footprint_layer.visible = False
+                m.split_map(
+                    left_layer=left_layer,
+                    right_layer=right_layer,
+                    add_close_button=True,
+                )
+                split.value = False
+            else:
+                left_layer = None
+
+    split.observe(change_split, names='value')
+
     event_control = ipyleaflet.WidgetControl(widget=dataset, position='topright')
     image_control = ipyleaflet.WidgetControl(widget=image, position='topright')
-    checkbox_control = ipyleaflet.WidgetControl(widget=checkbox, position='topright')
+    checkboxes = widgets.HBox([checkbox, split])
+    checkbox_control = ipyleaflet.WidgetControl(widget=checkboxes, position='topright')
+
     m.add(event_control)
     m.add(image_control)
     m.add(checkbox_control)
@@ -94,13 +122,13 @@ class Map(leafmap.Map):
         kwargs['toolbar_control'] = False
         super().__init__(**kwargs)
         basemap = {
-        "url": "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-        "attribution": "Google",
-        "name": "Google Satellite",
-    }
+            "url": "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+            "attribution": "Google",
+            "name": "Google Satellite",
+        }
         self.add_tile_layer(**basemap, shown=False)
         self.add_layer_manager(opened=False)
-        update_geojson(self)
+        add_widgets(self)
         default_geojson = f'{url}/datasets/Morocco-Earthquake-Sept-2023.geojson'
         self.add_geojson(default_geojson, layer_name='Footprint', zoom_to_layer=True)
 
