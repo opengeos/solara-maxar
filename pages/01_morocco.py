@@ -93,7 +93,12 @@ class Map(leafmap.Map):
     def __init__(self, **kwargs):
         kwargs['toolbar_control'] = False
         super().__init__(**kwargs)
-        self.add_basemap('Esri.WorldImagery', show=False)
+        basemap = {
+        "url": "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        "attribution": "Google",
+        "name": "Google Satellite",
+    }
+        self.add_tile_layer(**basemap, shown=False)
         self.add_layer_manager(opened=False)
         update_geojson(self)
         default_geojson = f'{url}/datasets/Morocco-Earthquake-Sept-2023.geojson'
@@ -117,5 +122,5 @@ def Page():
             data_ctrl=False,
             height="780px",
         )
-        # solara.Text(f"Zoom: {zoom.value}")
-        # solara.Text(f"Center: {center.value}")
+        solara.Text(f"Center: {center.value}")
+        solara.Text(f"Zoom: {zoom.value}")
