@@ -4,10 +4,11 @@ import solara
 import ipyleaflet
 import ipywidgets as widgets
 import pandas as pd
+import tempfile
 
-url = 'https://open.gishub.org/maxar-open-data'
+event = 'Morocco-Earthquake-Sept-2023'
+url = 'https://raw.githubusercontent.com/opengeos/maxar-open-data/master'
 repo = 'https://github.com/opengeos/maxar-open-data/blob/master/datasets'
-
 
 def get_datasets():
     datasets = f'{url}/datasets.csv'
@@ -16,9 +17,16 @@ def get_datasets():
 
 
 def get_catalogs(name):
-    dataset = f'{url}/datasets/{name}.tsv'
 
-    dataset_df = pd.read_csv(dataset, sep='\t')
+    dataset = f'{url}/datasets/{name}.tsv'
+    basename = os.path.basename(dataset)
+    tempdir = tempfile.gettempdir()
+    tmp_dataset = os.path.join(tempdir, basename)
+    if os.path.exists(tmp_dataset):
+        dataset_df = pd.read_csv(tmp_dataset, sep='\t')
+    else:
+        dataset_df = pd.read_csv(dataset, sep='\t')
+        dataset_df.to_csv(tmp_dataset, sep='\t', index=False)
     catalog_ids = dataset_df['catalog_id'].unique().tolist()
     catalog_ids.sort()
     return catalog_ids
@@ -32,7 +40,7 @@ def add_widgets(m):
     dataset = widgets.Dropdown(
         options=datasets,
         description='Event:',
-        value="Morocco-Earthquake-Sept-2023",
+        value=event,
         style=style,
         layout=widgets.Layout(width="270px", padding=padding),
     )
@@ -129,7 +137,14 @@ class Map(leafmap.Map):
         self.add_tile_layer(**basemap, shown=False)
         self.add_layer_manager(opened=False)
         add_widgets(self)
-        default_geojson = f'{url}/datasets/Morocco-Earthquake-Sept-2023.geojson'
+        default_geojson = f'{url}/datasets/{event}_union.geojson'
+        basename = os.path.basename(default_geojson)
+        tempdir = tempfile.gettempdir()
+        tmp_geojson = os.path.join(tempdir, basename)
+        if os.path.exists(tmp_geojson):
+            default_geojson = tmp_geojson
+        else:
+            leafmap.download_file(default_geojson, tmp_geojson, quiet=True)
         self.add_geojson(default_geojson, layer_name='Footprint', zoom_to_layer=True)
 
 
