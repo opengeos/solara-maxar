@@ -68,10 +68,18 @@ def add_widgets(m):
     )
 
     def change_dataset(change):
-        default_geojson = f'{url}/datasets/{change.new}.geojson'
+        default_geojson = f'{url}/datasets/{change.new}_union.geojson'
         m.layers = m.layers[:2]
         m.controls = m.controls[:-1]
+        basename = os.path.basename(default_geojson)
+        tempdir = tempfile.gettempdir()
+        tmp_geojson = os.path.join(tempdir, basename)
+        if os.path.exists(tmp_geojson):
+            default_geojson = tmp_geojson
+        else:
+            leafmap.download_file(default_geojson, tmp_geojson, quiet=True)
         m.add_geojson(default_geojson, layer_name='Footprint', zoom_to_layer=True)
+
         image.options = get_catalogs(change.new)
 
     dataset.observe(change_dataset, names='value')
