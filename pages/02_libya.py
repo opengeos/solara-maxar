@@ -130,6 +130,7 @@ def add_widgets(m):
                 right_layer.visible = True
                 footprint_layer = m.find_layer('Footprint')
                 footprint_layer.visible = False
+                checkbox.value = False
                 m.split_map(
                     left_layer=left_layer,
                     right_layer=right_layer,

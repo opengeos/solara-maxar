@@ -7,7 +7,7 @@ import geopandas as gpd
 import tempfile
 from shapely.geometry import Point
 
-event = 'Morocco-Earthquake-Sept-2023'
+event = 'Maui-Hawaii-fires-Aug-23'
 url = 'https://raw.githubusercontent.com/opengeos/maxar-open-data/master'
 repo = 'https://github.com/opengeos/maxar-open-data/blob/master/datasets'
 
