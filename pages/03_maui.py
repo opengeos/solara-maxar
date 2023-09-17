@@ -33,6 +33,14 @@ def get_catalogs(name):
     return catalog_ids
 
 
+def get_image_date(catalog_id, m):
+    gdf = m.footprint
+    image_date = pd.Timestamp(
+        gdf[gdf['catalog_id'] == catalog_id]['datetime'].values[0]
+    ).strftime('%Y-%m-%d %H:%M:%S')
+    return image_date
+
+
 def add_widgets(m):
     datasets = get_datasets()['dataset'].tolist()
     setattr(m, 'zoom_to_layer', True)
@@ -48,6 +56,13 @@ def add_widgets(m):
 
     catalog_ids = get_catalogs(dataset.value)
     setattr(m, 'catalog_ids', catalog_ids)
+
+    date_picker = widgets.DatePicker(
+        description='Start date:',
+        value=pd.to_datetime('2021-01-01').date(),
+        style=style,
+        layout=widgets.Layout(width="270px", padding=padding),
+    )
 
     image = widgets.Dropdown(
         value=None,
@@ -78,6 +93,8 @@ def add_widgets(m):
         layout=widgets.Layout(width="75px", padding='0px'),
     )
 
+    output = widgets.Output()
+
     def reset_map(change):
         if change.new:
             image.value = None
@@ -85,6 +102,14 @@ def add_widgets(m):
             m.layers = m.layers[:3]
             m.zoom_to_layer = True
             reset.value = False
+            date_picker.value = pd.to_datetime('2021-01-01').date()
+            m.remove_layer(m.find_layer('Footprint'))
+            m.add_gdf(
+                m.footprint, layer_name='Footprint', zoom_to_layer=False, info_mode=None
+            )
+            satellite_layer = m.find_layer('Google Satellite')
+            satellite_layer.visible = False
+            output.outputs = ()
 
     reset.observe(reset_map, names='value')
 
@@ -106,11 +131,28 @@ def add_widgets(m):
 
     dataset.observe(change_dataset, names='value')
 
+    def change_date(change):
+        if change.new:
+            start_date = change.new.strftime('%Y-%m-%d')
+            sub_gdf = m.gdf[m.gdf['datetime'] >= start_date]
+            sub_catalog_ids = sub_gdf['catalog_id'].values.tolist()
+            image.options = sub_catalog_ids
+            m.remove_layer(m.find_layer('Footprint'))
+            m.add_gdf(
+                sub_gdf, layer_name='Footprint', zoom_to_layer=False, info_mode=None
+            )
+            m.gdf = sub_gdf
+
+    date_picker.observe(change_date, names='value')
+
     def change_image(change):
         if change.new:
             if change.new not in m.get_layer_names():
                 mosaic = f'{url}/datasets/{dataset.value}/{image.value}.json'
                 m.add_stac_layer(mosaic, name=image.value, fit_bounds=m.zoom_to_layer)
+                image_date = get_image_date(image.value, m)
+                output.outputs = ()
+                output.append_stdout(f"Image date: {image_date}\n")
 
     image.observe(change_image, names='value')
 
@@ -162,7 +204,9 @@ def add_widgets(m):
 
     m.on_interaction(handle_click)
 
-    box = widgets.VBox([dataset, image, widgets.HBox([checkbox, split, reset])])
+    box = widgets.VBox(
+        [dataset, date_picker, image, widgets.HBox([checkbox, split, reset]), output]
+    )
     m.add_widget(box, position='topright', add_header=False)
 
 
@@ -190,8 +234,12 @@ class Map(leafmap.Map):
             default_geojson = tmp_geojson
         else:
             leafmap.download_file(default_geojson, tmp_geojson, quiet=True)
-        self.add_geojson(default_geojson, layer_name='Footprint', zoom_to_layer=True)
-        setattr(self, 'gdf', gpd.read_file(default_geojson))
+        self.add_geojson(
+            default_geojson, layer_name='Footprint', zoom_to_layer=True, info_mode=None
+        )
+        gdf = gpd.read_file(default_geojson)
+        setattr(self, 'gdf', gdf)
+        setattr(self, 'footprint', gdf)
 
 
 @solara.component
