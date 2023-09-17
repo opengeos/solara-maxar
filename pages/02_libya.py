@@ -1,14 +1,16 @@
 import os
 import leafmap
 import solara
-import ipyleaflet
 import ipywidgets as widgets
 import pandas as pd
+import geopandas as gpd
 import tempfile
+from shapely.geometry import Point
 
 event = 'Libya-Floods-Sept-2023'
 url = 'https://raw.githubusercontent.com/opengeos/maxar-open-data/master'
 repo = 'https://github.com/opengeos/maxar-open-data/blob/master/datasets'
+
 
 def get_datasets():
     datasets = f'{url}/datasets.csv'
@@ -17,7 +19,6 @@ def get_datasets():
 
 
 def get_catalogs(name):
-
     dataset = f'{url}/datasets/{name}.tsv'
     basename = os.path.basename(dataset)
     tempdir = tempfile.gettempdir()
@@ -34,7 +35,7 @@ def get_catalogs(name):
 
 def add_widgets(m):
     datasets = get_datasets()['dataset'].tolist()
-
+    setattr(m, 'zoom_to_layer', True)
     style = {"description_width": "initial"}
     padding = "0px 0px 0px 5px"
     dataset = widgets.Dropdown(
@@ -45,9 +46,12 @@ def add_widgets(m):
         layout=widgets.Layout(width="270px", padding=padding),
     )
 
+    catalog_ids = get_catalogs(dataset.value)
+    setattr(m, 'catalog_ids', catalog_ids)
+
     image = widgets.Dropdown(
         value=None,
-        options=get_catalogs(dataset.value),
+        options=m.catalog_ids,
         description='Image:',
         style=style,
         layout=widgets.Layout(width="270px", padding=padding),
@@ -55,17 +59,34 @@ def add_widgets(m):
 
     checkbox = widgets.Checkbox(
         value=True,
-        description='Show footprints',
+        description='Footprints',
         style=style,
-        layout=widgets.Layout(width="130px", padding=padding),
+        layout=widgets.Layout(width="90px", padding="0px"),
     )
 
     split = widgets.Checkbox(
         value=False,
         description='Split map',
         style=style,
-        layout=widgets.Layout(width="130px", padding=padding),
+        layout=widgets.Layout(width="92px", padding=padding),
     )
+
+    reset = widgets.Checkbox(
+        value=False,
+        description='Reset',
+        style=style,
+        layout=widgets.Layout(width="75px", padding='0px'),
+    )
+
+    def reset_map(change):
+        if change.new:
+            image.value = None
+            image.options = m.catalog_ids
+            m.layers = m.layers[:3]
+            m.zoom_to_layer = True
+            reset.value = False
+
+    reset.observe(reset_map, names='value')
 
     def change_dataset(change):
         default_geojson = f'{url}/datasets/{change.new}_union.geojson'
@@ -79,6 +100,7 @@ def add_widgets(m):
         else:
             leafmap.download_file(default_geojson, tmp_geojson, quiet=True)
         m.add_geojson(default_geojson, layer_name='Footprint', zoom_to_layer=True)
+        setattr(m, 'gdf', gpd.read_file(default_geojson))
 
         image.options = get_catalogs(change.new)
 
@@ -87,7 +109,7 @@ def add_widgets(m):
     def change_image(change):
         if change.new:
             mosaic = f'{url}/datasets/{dataset.value}/{image.value}.json'
-            m.add_stac_layer(mosaic, name=image.value)
+            m.add_stac_layer(mosaic, name=image.value, fit_bounds=m.zoom_to_layer)
 
     image.observe(change_image, names='value')
 
@@ -112,6 +134,8 @@ def add_widgets(m):
                     left_layer=left_layer,
                     right_layer=right_layer,
                     add_close_button=True,
+                    left_label=image.value,
+                    right_label='Google Satellite',
                 )
                 split.value = False
             else:
@@ -119,14 +143,25 @@ def add_widgets(m):
 
     split.observe(change_split, names='value')
 
-    event_control = ipyleaflet.WidgetControl(widget=dataset, position='topright')
-    image_control = ipyleaflet.WidgetControl(widget=image, position='topright')
-    checkboxes = widgets.HBox([checkbox, split])
-    checkbox_control = ipyleaflet.WidgetControl(widget=checkboxes, position='topright')
+    def handle_click(**kwargs):
+        if kwargs.get('type') == 'click':
+            latlon = kwargs.get('coordinates')
+            geometry = Point(latlon[::-1])
+            selected = m.gdf[m.gdf.intersects(geometry)]
+            setattr(m, 'zoom_to_layer', False)
+            if len(selected) > 0:
+                catalog_ids = selected['catalog_id'].values.tolist()
 
-    m.add(event_control)
-    m.add(image_control)
-    m.add(checkbox_control)
+                if len(catalog_ids) > 1:
+                    image.options = catalog_ids
+                image.value = catalog_ids[0]
+            else:
+                image.value = None
+
+    m.on_interaction(handle_click)
+
+    box = widgets.VBox([dataset, image, widgets.HBox([checkbox, split, reset])])
+    m.add_widget(box, position='topright', add_header=False)
 
 
 zoom = solara.reactive(2)
@@ -154,6 +189,7 @@ class Map(leafmap.Map):
         else:
             leafmap.download_file(default_geojson, tmp_geojson, quiet=True)
         self.add_geojson(default_geojson, layer_name='Footprint', zoom_to_layer=True)
+        setattr(self, 'gdf', gpd.read_file(default_geojson))
 
 
 @solara.component
