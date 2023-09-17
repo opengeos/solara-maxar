@@ -108,8 +108,9 @@ def add_widgets(m):
 
     def change_image(change):
         if change.new:
-            mosaic = f'{url}/datasets/{dataset.value}/{image.value}.json'
-            m.add_stac_layer(mosaic, name=image.value, fit_bounds=m.zoom_to_layer)
+            if change.new not in m.get_layer_names():
+                mosaic = f'{url}/datasets/{dataset.value}/{image.value}.json'
+                m.add_stac_layer(mosaic, name=image.value, fit_bounds=m.zoom_to_layer)
 
     image.observe(change_image, names='value')
 
