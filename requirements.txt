@@ -1,4 +1,4 @@
-leafmap
-solara
 geopandas
-pydantic< 2.0 
+leafmap
+pydantic< 2.0
+solara
