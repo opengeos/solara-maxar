@@ -1,4 +1,6 @@
 geopandas
 leafmap
 pydantic< 2.0
+setuptools<71
 solara
+
