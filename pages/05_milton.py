@@ -7,7 +7,7 @@ import geopandas as gpd
 import tempfile
 from shapely.geometry import Point
 
-event = "Libya-Floods-Sept-2023"
+event = "HurricaneMilton-Oct24"
 url = "https://raw.githubusercontent.com/opengeos/maxar-open-data/master"
 repo = "https://github.com/opengeos/maxar-open-data/blob/master/datasets"
 
@@ -142,6 +142,7 @@ def add_widgets(m):
             sub_catalog_ids = sub_gdf["catalog_id"].values.tolist()
             image.options = sub_catalog_ids
             m.remove_layer(m.find_layer("Footprint"))
+            m.controls = m.controls[:-1]
             m.controls = m.controls[:-1]
             m.add_gdf(
                 sub_gdf,
