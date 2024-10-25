@@ -14,6 +14,7 @@ def Page():
         - Web App: <https://giswqs-solara-maxar.hf.space>
         - GitHub: <https://github.com/opengeos/solara-maxar>
         - Hugging Face: <https://huggingface.co/spaces/giswqs/solara-maxar>
+        - Data Repository: <https://github.com/opengeos/maxar-open-data>
 
         """
 

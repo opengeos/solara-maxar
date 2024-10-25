@@ -104,7 +104,7 @@ def add_widgets(m):
             reset.value = False
             date_picker.value = pd.to_datetime("2021-01-01").date()
             m.remove_layer(m.find_layer("Footprint"))
-            m.controls = m.controls[:-1]
+
             m.add_gdf(
                 m.footprint,
                 layer_name="Footprint",
@@ -120,7 +120,7 @@ def add_widgets(m):
     def change_dataset(change):
         default_geojson = f"{url}/datasets/{change.new}_union.geojson"
         m.layers = m.layers[:2]
-        m.controls = m.controls[:-1]
+
         basename = os.path.basename(default_geojson)
         tempdir = tempfile.gettempdir()
         tmp_geojson = os.path.join(tempdir, basename)
@@ -142,7 +142,7 @@ def add_widgets(m):
             sub_catalog_ids = sub_gdf["catalog_id"].values.tolist()
             image.options = sub_catalog_ids
             m.remove_layer(m.find_layer("Footprint"))
-            m.controls = m.controls[:-1]
+
             m.add_gdf(
                 sub_gdf,
                 layer_name="Footprint",
