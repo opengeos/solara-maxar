@@ -203,7 +203,7 @@ def add_widgets(m):
             setattr(m, "zoom_to_layer", False)
             if len(selected) > 0:
                 catalog_ids = selected["catalog_id"].values.tolist()
-
+                image.value = None
                 if len(catalog_ids) > 1:
                     image.options = catalog_ids
                 image.value = catalog_ids[0]
