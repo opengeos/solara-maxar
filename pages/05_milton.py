@@ -157,6 +157,7 @@ def add_widgets(m):
         if change.new:
             if change.new not in m.get_layer_names():
                 mosaic = f"{url}/datasets/{dataset.value}/{image.value}.json"
+                print(mosaic)
                 m.add_stac_layer(mosaic, name=image.value, fit_bounds=m.zoom_to_layer)
                 image_date = get_image_date(image.value, m)
                 output.outputs = ()
